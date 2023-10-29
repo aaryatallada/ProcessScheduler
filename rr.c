@@ -204,10 +204,9 @@ main (int argc, char *argv[])
         }
         //TODO: ADD IF Q IS EMPTY AND WE DONT HAVE CP (initialize CP to Head if arrival time)
         if(cq == 0){
-            if(TAILQ_EMPTY(&list) && cp != NULL){//q is empty and we have a curr process
-                total_time++;
-            }
-            else if(cp == NULL && !TAILQ_EMPTY(&list)){
+//            if(TAILQ_EMPTY(&list) && cp != NULL){//q is empty and we have a curr process
+//            }
+            if(cp == NULL && !TAILQ_EMPTY(&list)){
                 cp = list.tqh_first;
                 
             }
@@ -233,7 +232,7 @@ main (int argc, char *argv[])
             }
             for(int i = 0; i < ps.nprocesses; i++){ //check arrival time and insert into Q
                 if(ps.process[i].arrival_time == total_time){
-                    TAILQ_INSERT_TAIL(&list, ps.process, pointers);
+                    TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
                 }
             }
         }
