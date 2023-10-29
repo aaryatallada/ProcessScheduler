@@ -9,13 +9,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-
 /* A process table entry.  */
 struct process
 {
   long pid;
   long arrival_time;
-  long burst_time;
+    long burst_time;
 
   TAILQ_ENTRY (process) pointers;
 
