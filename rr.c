@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+
 /* A process table entry.  */
 struct process
 {
@@ -21,6 +22,7 @@ struct process
   /* Additional fields here */
     bool done;
     int rtime;
+    int wtime;
   /* End of "Additional fields here" */
 };
 
@@ -137,7 +139,8 @@ init_processes (char const *filename)
       process[i].burst_time = next_int (&data, data_end);
         //ADDED
       process[i].done = false;
-        process[i].rtime = -1000; //easy to debug ;)
+      process[i].rtime = -1000; //easy to debug ;)
+        process[i].wtime = 0;
       if (process[i].burst_time == 0)
     {
       fprintf (stderr, "process %ld has zero burst time\n",
@@ -182,18 +185,77 @@ main (int argc, char *argv[])
 
   long total_wait_time = 0;
   long total_response_time = 0;
-    int curr_quant = 0;
-    
+    int cq = 0; //current quantum number
+    struct process* cp = NULL; //current process pointer
     
 
   /* Your code here */
     //quantum length is -1 when argv2 is "median"
     long total_time = 0;
+    struct process* iterator;
+    int counter;
+    //TODO: have to actually subtract from each process burst times (1)
+    
+    for(;;){
+        if(cp != NULL){
+            cp->burst_time--;
+        }
+        if(cq == quantum_length){
+            cq = 0;
+        }
+        //TODO: ADD IF Q IS EMPTY AND WE DONT HAVE CP (initialize CP to Head if arrival time)
+        if(cq == 0){
+            if(TAILQ_EMPTY(&list) && cp != NULL){//q is empty and we have a curr process
+                total_time++;
+            }
+            else if(cp == NULL && !TAILQ_EMPTY(&list)){
+                cp = list.tqh_first;
+                
+            }
+            else{//context switch :0
+                TAILQ_FOREACH(iterator, &list, pointers){
+                    iterator->wtime++;
+                }
+                if(cp!= NULL){
+                    if(cp->burst_time > 0){
+                        TAILQ_INSERT_TAIL(&list, cp, pointers);
+                        cp = list.tqh_first;
+                        TAILQ_REMOVE(&list, list.tqh_first, pointers);
+                        total_time++;
+                    }
+                    else if(cp->burst_time == 0){
+                        cp->done = true;
+                        cp = list.tqh_first;
+                        TAILQ_REMOVE(&list, list.tqh_first, pointers);
+                        total_time++;
+                    }
+                }
+                
+            }
+            for(int i = 0; i < ps.nprocesses; i++){ //check arrival time and insert into Q
+                if(ps.process[i].arrival_time == total_time){
+                    TAILQ_INSERT_TAIL(&list, ps.process, pointers);
+                }
+            }
+        }
+        counter = 0;
+        for(int i = 0; i < ps.nprocesses; i++){ //check if you can break from loop
+            if(ps.process[i].done)
+                counter++;
+        }
+        if(counter == ps.nprocesses)
+            break;
+        total_time++;
+        cq++;
+    }
+    
+    
+    
 //big loop
     //if cq = qlength set cq to 0
     //if cq = 0
         //if nothing in queue and curr process still has more time to run then keep running cq++
-        //if nothing running run top of queue cq++
+        //else if nothing running run top of queue cq++
         //else context switch - add 1 to wait time for each proc in q add 1 to total time cq++. Also see if process just ran should be put back into queue if not (process is finished) set done boolean to true
         //
     //if currquant < qlength no ctxt switch
