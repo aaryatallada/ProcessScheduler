@@ -192,7 +192,6 @@ main (int argc, char *argv[])
     //quantum length is -1 when argv2 is "median"
     long total_time = 0;
     struct process* iterator;
-    int counter;
     //TODO: have to actually subtract from each process burst times (1)
     
 for(;;) {
@@ -242,7 +241,10 @@ for(;;) {
     cq++;
 }
 
-    
+    for (int i = 0; i < ps.nprocesses; i++) {
+        total_wait_time += ps.process[i].wtime;
+        total_response_time += ps.process[i].rtime;
+    }
     
     
 //big loop
