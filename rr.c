@@ -139,7 +139,7 @@ init_processes (char const *filename)
       process[i].burst_time = next_int (&data, data_end);
         //ADDED
       process[i].done = false;
-      process[i].rtime = -1000; //easy to debug ;)
+      process[i].rtime = 0;
         process[i].wtime = 0;
       if (process[i].burst_time == 0)
     {
