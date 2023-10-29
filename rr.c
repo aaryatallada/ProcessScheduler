@@ -213,6 +213,7 @@ for(;;) {
 
             if (cp != NULL) {
                 if (cp->burst_time > 0) {
+                    printf("HELLO1");
                     TAILQ_INSERT_TAIL(&list, cp, pointers);
                     cp = list.tqh_first;
                     TAILQ_REMOVE(&list, list.tqh_first, pointers);
@@ -229,6 +230,7 @@ for(;;) {
             if (!ps.process[i].done) {
                 allProcessesDone = 0;
                 if (ps.process[i].arrival_time == total_time) {
+                    printf("HELLO2");
                     TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
                 }
             }
@@ -236,7 +238,7 @@ for(;;) {
     }
     TAILQ_FOREACH(iterator, &list, pointers) {
         iterator->wtime++;
-        printf("HELLO");
+
     }
     if (allProcessesDone) {
         break; // All processes are done, exit the loop
