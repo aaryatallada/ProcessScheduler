@@ -19,6 +19,8 @@ struct process
   TAILQ_ENTRY (process) pointers;
 
   /* Additional fields here */
+    bool done;
+    int rtime;
   /* End of "Additional fields here" */
 };
 
@@ -39,17 +41,17 @@ next_int (char const **data, char const *data_end)
     {
       char c = *d;
       if ('0' <= c && c <= '9')
-	{
-	  int_start = true;
-	  if (ckd_mul (&current, current, 10)
-	      || ckd_add (&current, current, c - '0'))
-	    {
-	      fprintf (stderr, "integer overflow\n");
-	      exit (1);
-	    }
-	}
+    {
+      int_start = true;
+      if (ckd_mul (&current, current, 10)
+          || ckd_add (&current, current, c - '0'))
+        {
+          fprintf (stderr, "integer overflow\n");
+          exit (1);
+        }
+    }
       else if (int_start)
-	break;
+    break;
     }
 
   if (!int_start)
@@ -133,12 +135,15 @@ init_processes (char const *filename)
       process[i].pid = next_int (&data, data_end);
       process[i].arrival_time = next_int (&data, data_end);
       process[i].burst_time = next_int (&data, data_end);
+        //ADDED
+      process[i].done = false;
+        process[i].rtime = -1000; //easy to debug ;)
       if (process[i].burst_time == 0)
-	{
-	  fprintf (stderr, "process %ld has zero burst time\n",
-		   process[i].pid);
-	  exit (1);
-	}
+    {
+      fprintf (stderr, "process %ld has zero burst time\n",
+           process[i].pid);
+      exit (1);
+    }
     }
 
   if (munmap (data_start, size) < 0)
@@ -165,7 +170,7 @@ main (int argc, char *argv[])
 
   struct process_set ps = init_processes (argv[1]);
   long quantum_length = (strcmp (argv[2], "median") == 0 ? -1
-			 : next_int_from_c_str (argv[2]));
+             : next_int_from_c_str (argv[2]));
   if (quantum_length == 0)
     {
       fprintf (stderr, "%s: zero quantum length\n", argv[0]);
@@ -177,15 +182,37 @@ main (int argc, char *argv[])
 
   long total_wait_time = 0;
   long total_response_time = 0;
+    int curr_quant = 0;
+    
+    
 
   /* Your code here */
+    //quantum length is -1 when argv2 is "median"
+    long total_time = 0;
+//big loop
+    //if cq = qlength set cq to 0
+    //if cq = 0
+        //if nothing in queue and curr process still has more time to run then keep running cq++
+        //if nothing running run top of queue cq++
+        //else context switch - add 1 to wait time for each proc in q add 1 to total time cq++. Also see if process just ran should be put back into queue if not (process is finished) set done boolean to true
+        //
+    //if currquant < qlength no ctxt switch
+        //loop through queue 1 to wait time for each process
+    // parse through and check if anything arrives. Add to queue.
+    //if arrival time of any process(ties give priority to ordering in txt) = total time start running
+    //add to rtime(response time) of process in the q
+    
 
   /* End of "Your code here" */
 
+    
+    
+    
+    
   printf ("Average wait time: %.2f\n",
-	  total_wait_time / (double) ps.nprocesses);
+      total_wait_time / (double) ps.nprocesses);
   printf ("Average response time: %.2f\n",
-	  total_response_time / (double) ps.nprocesses);
+      total_response_time / (double) ps.nprocesses);
 
   if (fflush (stdout) < 0 || ferror (stdout))
     {
