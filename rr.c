@@ -195,57 +195,53 @@ main (int argc, char *argv[])
     int counter;
     //TODO: have to actually subtract from each process burst times (1)
     
-    for(;;){
-        if(cp != NULL){
-            cp->burst_time--;
-        }
-        if(cq == quantum_length){
-            cq = 0;
-        }
-        //TODO: ADD IF Q IS EMPTY AND WE DONT HAVE CP (initialize CP to Head if arrival time)
-        if(cq == 0){
-//            if(TAILQ_EMPTY(&list) && cp != NULL){//q is empty and we have a curr process
-//            }
-            if(cp == NULL && !TAILQ_EMPTY(&list)){
-                cp = list.tqh_first;
-                
+for(;;) {
+    if (cp != NULL) {
+        cp->burst_time--;
+    }
+    if (cq == quantum_length) {
+        cq = 0;
+    }
+    // Check if all processes are done
+    int allProcessesDone = 1;
+    
+    if (cq == 0) {
+        if (cp == NULL && !TAILQ_EMPTY(&list)) {
+            cp = list.tqh_first;
+        } else {
+            TAILQ_FOREACH(iterator, &list, pointers) {
+                iterator->wtime++;
             }
-            else{//context switch :0
-                TAILQ_FOREACH(iterator, &list, pointers){
-                    iterator->wtime++;
+            if (cp != NULL) {
+                if (cp->burst_time > 0) {
+                    TAILQ_INSERT_TAIL(&list, cp, pointers);
+                    cp = list.tqh_first;
+                    TAILQ_REMOVE(&list, list.tqh_first, pointers);
+                    total_time++;
+                } else if (cp->burst_time == 0) {
+                    cp->done = true;
+                    cp = list.tqh_first;
+                    TAILQ_REMOVE(&list, list.tqh_first, pointers);
+                    total_time++;
                 }
-                if(cp!= NULL){
-                    if(cp->burst_time > 0){
-                        TAILQ_INSERT_TAIL(&list, cp, pointers);
-                        cp = list.tqh_first;
-                        TAILQ_REMOVE(&list, list.tqh_first, pointers);
-                        total_time++;
-                    }
-                    else if(cp->burst_time == 0){
-                        cp->done = true;
-                        cp = list.tqh_first;
-                        TAILQ_REMOVE(&list, list.tqh_first, pointers);
-                        total_time++;
-                    }
-                }
-                
             }
-            for(int i = 0; i < ps.nprocesses; i++){ //check arrival time and insert into Q
-                if(ps.process[i].arrival_time == total_time){
+        }
+        for (int i = 0; i < ps.nprocesses; i++) {
+            if (!ps.process[i].done) {
+                allProcessesDone = 0;
+                if (ps.process[i].arrival_time == total_time) {
                     TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
                 }
             }
         }
-        counter = 0;
-        for(int i = 0; i < ps.nprocesses; i++){ //check if you can break from loop
-            if(ps.process[i].done)
-                counter++;
-        }
-        if(counter == ps.nprocesses)
-            break;
-        total_time++;
-        cq++;
     }
+    if (allProcessesDone) {
+        break; // All processes are done, exit the loop
+    }
+    total_time++;
+    cq++;
+}
+
     
     
     
