@@ -208,10 +208,9 @@ for(;;) {
     if (cq == 0) {
         if (cp == NULL && !TAILQ_EMPTY(&list)) {
             cp = list.tqh_first;
-        } else {
-            TAILQ_FOREACH(iterator, &list, pointers) {
-                iterator->wtime++;
-            }
+        }
+        else {
+
             if (cp != NULL) {
                 if (cp->burst_time > 0) {
                     TAILQ_INSERT_TAIL(&list, cp, pointers);
@@ -234,6 +233,9 @@ for(;;) {
                 }
             }
         }
+    }
+    TAILQ_FOREACH(iterator, &list, pointers) {
+        iterator->wtime++;
     }
     if (allProcessesDone) {
         break; // All processes are done, exit the loop
