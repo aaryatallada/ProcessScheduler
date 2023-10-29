@@ -137,9 +137,9 @@ init_processes (char const *filename)
       process[i].arrival_time = next_int (&data, data_end);
       process[i].burst_time = next_int (&data, data_end);
         //ADDED
-      process[i].done = false;
-      process[i].rtime = 0;
-        process[i].wtime = 0;
+//      process[i].done = false;
+//      process[i].rtime = 0;
+//      process[i].wtime = 0;
       if (process[i].burst_time == 0)
     {
       fprintf (stderr, "process %ld has zero burst time\n",
@@ -193,64 +193,111 @@ main (int argc, char *argv[])
     long total_time = 0;
     struct process* iterator;
     //TODO: have to actually subtract from each process burst times (1)
-    
-for(;;) {
-    if (cp != NULL) {
-        cp->burst_time--;
+    bool allProcessesDone = false;
+    for(int i = 0; i < ps.nprocesses; i++){
+        ps.process[i].done = false;
+        ps.process[i].rtime = 0;
+        ps.process[i].wtime = 0;
     }
-    if (cq == quantum_length) {
-        cq = 0;
-    }
-    // Check if all processes are done
-    int allProcessesDone = 1;
-    
-    if (cq == 0) {
-        if (cp == NULL && !TAILQ_EMPTY(&list)) {
-            cp = list.tqh_first;
+    while (!allProcessesDone)
+    {
+        if(cp != NULL && cp->burst_time == 0){
+            cp = TAILQ_FIRST(&list);
+            if(cp != NULL)
+                TAILQ_REMOVE(&list, cp, pointers);
+            
         }
-        else {
+//        if(total_time == 170)
+//            allProcessesDone = true;
+        // If current process pointer is NULL, try to fetch a process from the queue
+        if (cp == NULL)
+        {
+            cp = TAILQ_FIRST(&list);
+            if(cp != NULL)
+                TAILQ_REMOVE(&list, cp, pointers);
+        }
+        if (cp == NULL && !TAILQ_EMPTY(&list))
+        {
+            cp = TAILQ_FIRST(&list);
+            TAILQ_REMOVE(&list, cp, pointers);
+        }
 
-            if (cp != NULL) {
-                if (cp->burst_time > 0) {
-                    printf("HELLO1");
-                    TAILQ_INSERT_TAIL(&list, cp, pointers);
-                    cp = list.tqh_first;
-                    TAILQ_REMOVE(&list, list.tqh_first, pointers);
-                    total_time++;
-                } else if (cp->burst_time == 0) {
-                    printf("changing done to true");
-                    cp->done = true;
-                    cp = list.tqh_first;
-                    TAILQ_REMOVE(&list, list.tqh_first, pointers);
-                    total_time++;
-                }
+        if (cp != NULL)
+        {
+            // Process is running
+            cp->burst_time--;
+
+            if (cp->burst_time == 0)
+            {
+                // Process is done
+                cp->done = true;
+                cp = NULL;
             }
         }
-        for (int i = 0; i < ps.nprocesses; i++) {
-            if (!ps.process[i].done) {
-                allProcessesDone = 0;
-                if (ps.process[i].arrival_time == total_time) {
-                    printf("HELLO2");
-                    TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
-                }
+
+        if (cq == quantum_length || cp == NULL)
+        {
+            // Time slice expired or no process running, so switch
+            cq = 0;
+            if (cp != NULL && !cp->done)
+            {
+                // Put the current process back in the queue if it's not done
+                TAILQ_INSERT_TAIL(&list, cp, pointers);
+            }
+
+            // Get the next process from the queue
+            cp = TAILQ_FIRST(&list);
+            if (cp != NULL)
+            {
+                TAILQ_REMOVE(&list, cp, pointers);
             }
         }
-    }
-    TAILQ_FOREACH(iterator, &list, pointers) {
-        iterator->wtime++;
 
-    }
-    total_time++;
-    cq++;
-    if (allProcessesDone) {
-        break; // All processes are done, exit the loop
-    }
+        // Increment wait time for all processes in the queue
+        TAILQ_FOREACH(iterator, &list, pointers)
+        {
+            iterator->wtime++;
+        }
 
-}
+        // Increment response time for processes that just started
+        for (int i = 0; i < ps.nprocesses; i++)
+        {
+            if (!ps.process[i].done && ps.process[i].arrival_time == total_time)
+            {
+                TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
+                //TODO: RESPONSE TIME BELOW IS WRONG
+ //               ps.process[i].rtime = total_time - ps.process[i].arrival_time;
+            }
+        }
 
-    for (int i = 0; i < ps.nprocesses; i++) {
-        printf("hello");
-//        printf("response time: %d", ps.process[i].rtime);
+
+
+        // Check if all processes are done
+        int counter = 0;
+        for (int i = 0; i < ps.nprocesses; i++)
+        {
+//            printf("TOTAL TIME %ld \n", total_time);
+//            printf("pid %ld, burst %ld \n", ps.process[i].pid, ps.process[i].burst_time);
+            if (ps.process[i].done)
+            {
+                counter++;
+            }
+        }
+        if (counter == ps.nprocesses && TAILQ_EMPTY(&list))
+        {
+            allProcessesDone = true;
+        }
+        total_time++;
+
+        cq++;
+    }
+    
+    
+//    printf("done status of %ld is %d", ps.process[0].pid, ps.process[0].done);
+//    printf("total time at the end is %d", total_time);
+    // Calculate total wait and response times
+    for (int i = 0; i < ps.nprocesses; i++)
+    {
         total_wait_time += ps.process[i].wtime;
         total_response_time += ps.process[i].rtime;
     }
