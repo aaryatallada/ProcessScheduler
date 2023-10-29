@@ -236,6 +236,7 @@ for(;;) {
     }
     TAILQ_FOREACH(iterator, &list, pointers) {
         iterator->wtime++;
+        printf("HELLO");
     }
     if (allProcessesDone) {
         break; // All processes are done, exit the loop
@@ -245,8 +246,8 @@ for(;;) {
 }
 
     for (int i = 0; i < ps.nprocesses; i++) {
-        printf("wait time: %d", ps.process[i].wtime);
-        printf("response time: %d", ps.process[i].rtime);
+//        printf("wait time: %d", ps.process[i].wtime);
+//        printf("response time: %d", ps.process[i].rtime);
         total_wait_time += ps.process[i].wtime;
         total_response_time += ps.process[i].rtime;
     }
