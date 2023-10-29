@@ -219,6 +219,7 @@ for(;;) {
                     TAILQ_REMOVE(&list, list.tqh_first, pointers);
                     total_time++;
                 } else if (cp->burst_time == 0) {
+                    printf("changing done to true");
                     cp->done = true;
                     cp = list.tqh_first;
                     TAILQ_REMOVE(&list, list.tqh_first, pointers);
@@ -240,11 +241,12 @@ for(;;) {
         iterator->wtime++;
 
     }
+    total_time++;
+    cq++;
     if (allProcessesDone) {
         break; // All processes are done, exit the loop
     }
-    total_time++;
-    cq++;
+
 }
 
     for (int i = 0; i < ps.nprocesses; i++) {
