@@ -204,6 +204,35 @@ main (int argc, char *argv[])
         if(cq == quantum_length){
             cs = !cs;
         }
+        if (cq == quantum_length || cp == NULL)
+        {
+            // Time slice expired or no process running, so switch
+            if(!cs)
+                cq = 0;
+            if(cs){
+                if (cp != NULL && !cp->done)
+                {
+                    // Put the current process back in the queue if it's not done
+                    TAILQ_INSERT_TAIL(&list, cp, pointers);
+                }
+                
+                // Get the next process from the queue
+                cp = TAILQ_FIRST(&list);
+                if (cp != NULL)
+                {
+                    TAILQ_REMOVE(&list, cp, pointers);
+                }
+            }
+        }
+        for (int i = 0; i < ps.nprocesses; i++)
+        {
+            if (!ps.process[i].done && ps.process[i].arrival_time == total_time)
+            {
+                TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
+                //TODO: RESPONSE TIME BELOW IS WRONG
+ //               ps.process[i].rtime = total_time - ps.process[i].arrival_time;
+            }
+        }
         if(cp != NULL && cp->burst_time == 0){
             cp = TAILQ_FIRST(&list);
             if(cp != NULL)
@@ -238,37 +267,13 @@ main (int argc, char *argv[])
             }
         }
 
-        if ((cq == quantum_length && !cs) || cp == NULL)
-        {
-            // Time slice expired or no process running, so switch
-            cq = 0;
-            if (cp != NULL && !cp->done)
-            {
-                // Put the current process back in the queue if it's not done
-                TAILQ_INSERT_TAIL(&list, cp, pointers);
-            }
 
-            // Get the next process from the queue
-            cp = TAILQ_FIRST(&list);
-            if (cp != NULL)
-            {
-                TAILQ_REMOVE(&list, cp, pointers);
-            }
-        }
 
         // Increment wait time for all processes in the queue
 
 
         // Increment response time for processes that just started
-        for (int i = 0; i < ps.nprocesses; i++)
-        {
-            if (!ps.process[i].done && ps.process[i].arrival_time == total_time)
-            {
-                TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
-                //TODO: RESPONSE TIME BELOW IS WRONG
- //               ps.process[i].rtime = total_time - ps.process[i].arrival_time;
-            }
-        }
+
         TAILQ_FOREACH(iterator, &list, pointers)
         {
             iterator->wtime++;
