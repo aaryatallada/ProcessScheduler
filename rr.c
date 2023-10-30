@@ -201,7 +201,7 @@ main (int argc, char *argv[])
     }
     while (!allProcessesDone)
     {
-        if(cq == quantum_length){
+        if(cq == quantum_length ||(cp != NULL && cp->burst_time == 0)){
             cs = !cs;
         }
         if (cq == quantum_length || cp == NULL)
