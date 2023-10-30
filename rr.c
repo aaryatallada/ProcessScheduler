@@ -194,6 +194,8 @@ main (int argc, char *argv[])
     struct process* iterator;
     //TODO: have to actually subtract from each process burst times (1)
     bool allProcessesDone = false;
+    bool abtocum = false;
+    bool justrem = false;
     for(int i = 0; i < ps.nprocesses; i++){
         ps.process[i].done = false;
         ps.process[i].rtime = 0;
@@ -201,26 +203,40 @@ main (int argc, char *argv[])
     }
     while (!allProcessesDone)
     {
-
+        justrem = false;
+        abtocum = false;
+        for(int i = 0; i < ps.nprocesses; i++){
+            if(ps.process[i].arrival_time == total_time+1 && TAILQ_EMPTY(&list))
+                abtocum = true;
+        }
+        
         if(cp != NULL && cp->burst_time == 0 ){
             cq = quantum_length;
-            cp = NULL;
+            //          cp = NULL;
         }
         if(cq == quantum_length){
             cs = !cs;
         }
-
+        if(cs && cp->burst_time > 0 && TAILQ_EMPTY(&list) && !abtocum){
+            continue;
+        }
+        if(abtocum)
+            cs = false;
+//        if(cs && TAILQ_EMPTY(&list) && cp == NULL) //if proc x finishes at end of 27 and proc y comes at 28 only one in q you wwant to cs still but not if theres nothing in queue
+//            cs = false;
 
         if (cq == quantum_length || cp == NULL)
         {
-            // Time slice expired or no process running, so switch
+
             if(!cs)
                 cq = 0;
             if(cs){
                 if (cp != NULL && !cp->done)
                 {
+                    
                     // Put the current process back in the queue if it's not done
                     TAILQ_INSERT_TAIL(&list, cp, pointers);
+                    cp = NULL;
                 }
 
                 // Get the next process from the queue
@@ -248,14 +264,18 @@ main (int argc, char *argv[])
             if (cp != NULL)
             {
                 TAILQ_REMOVE(&list, cp, pointers);
+                justrem = true;
             }
         }
     }
 
         if(cp != NULL && cp->burst_time == 0 && !cs){
             cp = TAILQ_FIRST(&list);
-            if(cp != NULL)
+            if(cp != NULL){
                 TAILQ_REMOVE(&list, cp, pointers);
+                justrem = true;
+            }
+            
 
         }
 
@@ -265,14 +285,18 @@ main (int argc, char *argv[])
         if (cp == NULL && !cs)
         {
             cp = TAILQ_FIRST(&list);
-            if(cp != NULL)
+            if(cp != NULL){
                 TAILQ_REMOVE(&list, cp, pointers);
+                justrem = true;
+            }
         }
         if (cp == NULL && !TAILQ_EMPTY(&list) && !cs)
         {
             cp = TAILQ_FIRST(&list);
             TAILQ_REMOVE(&list, cp, pointers);
+            justrem = true;
         }
+        
 
         if (cp != NULL && !cs)//IS THIS RIGHT !CS PART??
         {
@@ -299,6 +323,33 @@ main (int argc, char *argv[])
         if(cs && cp != NULL){
             cp->wtime++;
         }
+        if(cs && TAILQ_EMPTY(&list) && !abtocum && !justrem && cp != NULL){
+            cp->wtime--;
+            if(cp != NULL && cp->burst_time == 0){
+                cp = TAILQ_FIRST(&list);
+                if(cp != NULL)
+                    TAILQ_REMOVE(&list, cp, pointers);
+
+            }
+            if (cp == NULL)
+            {
+                cp = TAILQ_FIRST(&list);
+                if(cp != NULL)
+                    TAILQ_REMOVE(&list, cp, pointers);
+            }
+            if (cp == NULL && !TAILQ_EMPTY(&list))
+            {
+                cp = TAILQ_FIRST(&list);
+                TAILQ_REMOVE(&list, cp, pointers);
+            }
+            cp->burst_time--;
+
+            if (cp->burst_time == 0)
+            {
+                // Process is done
+                cp->done = true;
+            }
+        }
 
 
         // Check if all processes are done
@@ -321,9 +372,9 @@ main (int argc, char *argv[])
             cq++;
         }
     }
-    for(int i = 0; i < ps.nprocesses; i++){
-        ps.process[i].wtime--;
-    }
+//    for(int i = 0; i < ps.nprocesses; i++){
+//        ps.process[i].wtime--;
+//    }
 
     
 
