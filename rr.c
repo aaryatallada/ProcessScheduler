@@ -184,7 +184,7 @@ main (int argc, char *argv[])
 
   long total_wait_time = 0;
   long total_response_time = 0;
-    int cq = 0; //current quantum number
+    long cq = 0; //current quantum number
     struct process* cp = NULL; //current process pointer
     bool cs = false; //context switch
 
@@ -201,7 +201,11 @@ main (int argc, char *argv[])
     }
     while (!allProcessesDone)
     {
-        if(cq == quantum_length ||(cp != NULL && cp->burst_time == 0)){
+        if(cp != NULL && cp->burst_time == 0){
+            cq = quantum_length;
+            cp = NULL;
+        }
+        if(cq == quantum_length){
             cs = !cs;
         }
         if (cq == quantum_length || cp == NULL)
@@ -263,7 +267,6 @@ main (int argc, char *argv[])
             {
                 // Process is done
                 cp->done = true;
-                cp = NULL;
             }
         }
 
