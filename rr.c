@@ -186,7 +186,7 @@ main (int argc, char *argv[])
   long total_response_time = 0;
     int cq = 0; //current quantum number
     struct process* cp = NULL; //current process pointer
-    
+    bool cs = false; //context switch
 
   /* Your code here */
     //quantum length is -1 when argv2 is "median"
@@ -201,6 +201,9 @@ main (int argc, char *argv[])
     }
     while (!allProcessesDone)
     {
+        if(cq == quantum_length){
+            cs = !cs;
+        }
         if(cp != NULL && cp->burst_time == 0){
             cp = TAILQ_FIRST(&list);
             if(cp != NULL)
@@ -222,7 +225,7 @@ main (int argc, char *argv[])
             TAILQ_REMOVE(&list, cp, pointers);
         }
 
-        if (cp != NULL)
+        if (cp != NULL && !cs)//IS THIS RIGHT !CS PART??
         {
             // Process is running
             cp->burst_time--;
@@ -235,7 +238,7 @@ main (int argc, char *argv[])
             }
         }
 
-        if (cq == quantum_length || cp == NULL)
+        if ((cq == quantum_length && !cs) || cp == NULL)
         {
             // Time slice expired or no process running, so switch
             cq = 0;
@@ -254,10 +257,7 @@ main (int argc, char *argv[])
         }
 
         // Increment wait time for all processes in the queue
-        TAILQ_FOREACH(iterator, &list, pointers)
-        {
-            iterator->wtime++;
-        }
+
 
         // Increment response time for processes that just started
         for (int i = 0; i < ps.nprocesses; i++)
@@ -269,15 +269,18 @@ main (int argc, char *argv[])
  //               ps.process[i].rtime = total_time - ps.process[i].arrival_time;
             }
         }
-
+        TAILQ_FOREACH(iterator, &list, pointers)
+        {
+            iterator->wtime++;
+        }
 
 
         // Check if all processes are done
         int counter = 0;
         for (int i = 0; i < ps.nprocesses; i++)
         {
-//            printf("TOTAL TIME %ld \n", total_time);
-//            printf("pid %ld, burst %ld \n", ps.process[i].pid, ps.process[i].burst_time);
+            printf("TOTAL TIME %ld \n", total_time);
+            printf("pid %ld, burst %ld \n", ps.process[i].pid, ps.process[i].burst_time);
             if (ps.process[i].done)
             {
                 counter++;
@@ -288,8 +291,9 @@ main (int argc, char *argv[])
             allProcessesDone = true;
         }
         total_time++;
-
-        cq++;
+        if(!cs){
+            cq++;
+        }
     }
     
     
