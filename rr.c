@@ -15,6 +15,7 @@ struct process
   long pid;
   long arrival_time;
     long burst_time;
+    long og_burst;
 
   TAILQ_ENTRY (process) pointers;
 
@@ -24,6 +25,7 @@ struct process
     long wtime;
     bool active;
     long etime;
+    long endtime;
   /* End of "Additional fields here" */
 };
 
@@ -163,6 +165,9 @@ init_processes (char const *filename)
   return (struct process_set) {nprocesses, process};
 }
 
+
+
+
 int
 main (int argc, char *argv[])
 {
@@ -189,8 +194,12 @@ main (int argc, char *argv[])
     long cq = 0; //current quantum number
     struct process* cp = NULL; //current process pointer
     bool cs = false; //context switch
-
+    bool medianquant = false;
   /* Your code here */
+    if(quantum_length == -1){
+        quantum_length = 1;
+        medianquant = true;
+    }
     //quantum length is -1 when argv2 is "median"
     long total_time = 0;
     struct process* iterator;
@@ -203,7 +212,16 @@ main (int argc, char *argv[])
         ps.process[i].rtime = 0;
         ps.process[i].wtime = 0;
         ps.process[i].active = false;
+        ps.process[i].og_burst = ps.process[i].burst_time;
+        ps.process[i].endtime = 0;
+
     }
+    long arr[ps.nprocesses];
+    for(int i = 0; i < ps.nprocesses; i++){
+        arr[i] = 0;
+    }
+    int index = 0;
+    long median = 1;
     while (!allProcessesDone)
     {
 
@@ -215,12 +233,60 @@ main (int argc, char *argv[])
         }
         
         if(cp != NULL && cp->burst_time == 0 ){
+            cp->endtime = total_time;
             cq = quantum_length;
             //          cp = NULL;
         }
         if(cq == quantum_length){
             cs = !cs;
         }
+        
+        
+        // ---------------------------------------MEDIAN----------------------------------------------------------------------------------------
+        //IF !CS CALCULATE MEDIAN HERE. NOT CS BECAUSE DONT WANT TO MESS WITH CONTEXT SWITCHING.
+        if (total_time == 0 && medianquant){
+            cq = quantum_length;
+        }
+        index = 0;
+        for(int i = 0; i < ps.nprocesses; i++){
+            if(total_time >= ps.process[i].arrival_time){
+                arr[index] = ps.process[i].og_burst - ps.process[i].burst_time;
+                index++;
+            }
+        }
+        arr[index] = -1;
+        int j;
+        for (j = 0; j < ps.nprocesses; j++){
+            if(arr[j] == -1)
+                break;
+        }
+        if(arr[0] == -1)
+            median = 1;
+        if(j == 1)
+            median = arr[0];
+        else if(j%2 == 0){ // even size
+            median = (arr[(j/2) - 1] + arr[j/2])/2;
+        }
+        else{
+            median = arr[j/2];
+        }
+        if(median == 0)
+            median = 1;
+        if(!cs && cq == quantum_length && medianquant){
+            quantum_length = median;
+            cq = 0;
+            printf("NEW MEDIAN: %ld \n", median);
+            for(int i = 0; i < j; i++){
+                printf("CPU time exhausted  -- %ld \n" ,arr[i] );
+            }
+        }
+
+            
+        
+        
+        
+        // ---------------------------------------MEDIAN----------------------------------------------------------------------------------------
+
         if(cs && cp->burst_time > 0 && TAILQ_EMPTY(&list) && !abtocum){
             continue;
         }
@@ -265,6 +331,7 @@ main (int argc, char *argv[])
         }
 //MOVED THIS IF v ABOVE THE ONE BELOW (NOT RESPONSE TIME)
         if(cp != NULL && cp->burst_time == 0 && !cs){
+            cp->endtime=total_time;
             cp = TAILQ_FIRST(&list);
             cp->active = true;
             if(cp != NULL){
@@ -332,6 +399,7 @@ main (int argc, char *argv[])
 
             if (cp->burst_time == 0)
             {
+                cp->endtime= total_time;
                 // Process is done
                 cp->done = true;
             }
@@ -353,6 +421,7 @@ main (int argc, char *argv[])
         if(cs && TAILQ_EMPTY(&list) && !abtocum && !justrem && cp != NULL){
             cp->wtime--;
             if(cp != NULL && cp->burst_time == 0){
+                cp->endtime = total_time;
                 cp = TAILQ_FIRST(&list);
                 if(cp != NULL)
                     TAILQ_REMOVE(&list, cp, pointers);
@@ -373,6 +442,7 @@ main (int argc, char *argv[])
 
             if (cp->burst_time == 0)
             {
+                cp->endtime = total_time;
                 // Process is done
                 cp->done = true;
             }
@@ -417,10 +487,16 @@ main (int argc, char *argv[])
     for(int i = 0; i < ps.nprocesses; i++){
         if(ps.process[i].active){
             ps.process[i].rtime = ps.process[i].etime - ps.process[i].burst_time  - ps.process[i].arrival_time;
+            printf("pid: %ld and endtime: %ld\n", ps.process[i].pid, ps.process[i].endtime);
         }
     }
     
-    
+    if(medianquant){
+        for(int i = 0; i < ps.nprocesses; i++){
+            ps.process[i].endtime--;
+            ps.process[i].wtime = ps.process[i].endtime - ps.process[i].arrival_time - ps.process[i].og_burst;
+        }
+    }
     
 //    printf("done status of %ld is %d", ps.process[0].pid, ps.process[0].done);
 //    printf("total time at the end is %d", total_time);
@@ -432,6 +508,7 @@ main (int argc, char *argv[])
     }
     
     total_response_time -= 1;
+
 //big loop
     //if cq = qlength set cq to 0
     //if cq = 0
