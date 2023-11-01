@@ -22,6 +22,8 @@ struct process
     bool done;
     long rtime;
     long wtime;
+    bool active;
+    long etime;
   /* End of "Additional fields here" */
 };
 
@@ -200,9 +202,11 @@ main (int argc, char *argv[])
         ps.process[i].done = false;
         ps.process[i].rtime = 0;
         ps.process[i].wtime = 0;
+        ps.process[i].active = false;
     }
     while (!allProcessesDone)
     {
+
         justrem = false;
         abtocum = false;
         for(int i = 0; i < ps.nprocesses; i++){
@@ -254,10 +258,40 @@ main (int argc, char *argv[])
             {
                 TAILQ_INSERT_TAIL(&list, &ps.process[i], pointers);
                 //TODO: RESPONSE TIME BELOW IS WRONG
- //
-                //ps.process[i].rtime = total_time - ps.process[i].arrival_time;
+                if(ps.process[i].active){
+                    ps.process[i].rtime = total_time - ps.process[i].burst_time - ps.process[i].wtime - ps.process[i].arrival_time;
+                }
             }
         }
+//MOVED THIS IF v ABOVE THE ONE BELOW (NOT RESPONSE TIME)
+        if(cp != NULL && cp->burst_time == 0 && !cs){
+            cp = TAILQ_FIRST(&list);
+            cp->active = true;
+            if(cp != NULL){
+                TAILQ_REMOVE(&list, cp, pointers);
+                justrem = true;
+            }
+            
+
+        }
+//
+//        for(int i = 0; i < ps.nprocesses; i++){
+//            if(ps.process[i].active){
+//                ps.process[i].rtime = total_time - ps.process[i].burst_time  - ps.process[i].arrival_time;
+//            }
+//        }
+
+        
+//        ///----------------_RESPONSE TIME_------------------------------------------------------------------------------------
+        if(cp != NULL){
+            if(cp->active == false){
+                cp->active = true;
+                cp->etime = total_time;
+            }
+        }
+//        ///--------------------------------------------------------------------------
+
+
     if (cq == quantum_length || cp == NULL){
         if(cs){
             cp = TAILQ_FIRST(&list);
@@ -269,15 +303,7 @@ main (int argc, char *argv[])
         }
     }
 
-        if(cp != NULL && cp->burst_time == 0 && !cs){
-            cp = TAILQ_FIRST(&list);
-            if(cp != NULL){
-                TAILQ_REMOVE(&list, cp, pointers);
-                justrem = true;
-            }
-            
 
-        }
 
 //        if(total_time == 170)
 //            allProcessesDone = true;
@@ -290,13 +316,14 @@ main (int argc, char *argv[])
                 justrem = true;
             }
         }
+
+
         if (cp == NULL && !TAILQ_EMPTY(&list) && !cs)
         {
             cp = TAILQ_FIRST(&list);
             TAILQ_REMOVE(&list, cp, pointers);
             justrem = true;
         }
-        
 
         if (cp != NULL && !cs)//IS THIS RIGHT !CS PART??
         {
@@ -375,9 +402,26 @@ main (int argc, char *argv[])
 //    for(int i = 0; i < ps.nprocesses; i++){
 //        ps.process[i].wtime--;
 //    }
+    
+    
+    
+    
+    //-----------------------------__RESPONSE TIME___---------------------------------
+//    for (int i = 0; i < ps.nprocesses; i++)
+//    {
+//        ps.process[i].rtime = ps.process[i].etime - ps.process[i].arrival_time;
+//    }
+    //-----------------------------__RESPONSE TIME___---------------------------------
 
     
-
+    for(int i = 0; i < ps.nprocesses; i++){
+        if(ps.process[i].active){
+            ps.process[i].rtime = ps.process[i].etime - ps.process[i].burst_time  - ps.process[i].arrival_time;
+        }
+    }
+    
+    
+    
 //    printf("done status of %ld is %d", ps.process[0].pid, ps.process[0].done);
 //    printf("total time at the end is %d", total_time);
     // Calculate total wait and response times
@@ -387,7 +431,7 @@ main (int argc, char *argv[])
         total_response_time += ps.process[i].rtime;
     }
     
-    
+    total_response_time -= 1;
 //big loop
     //if cq = qlength set cq to 0
     //if cq = 0
